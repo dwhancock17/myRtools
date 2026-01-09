@@ -1,3 +1,5 @@
 ^myRtools\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
+^\.vdoc
+r-package-builder\.qmd

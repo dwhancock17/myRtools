@@ -1,4 +1,53 @@
+---
+title: "Untitled"
+format: html
+---
 
+## Step 2: Update DESCRIPTION File
+
+After the package is created, manually edit the `DESCRIPTION` file with this content:
+
+```
+Package: myRtools
+Title: Personal R Utility Functions
+Version: 0.1.0
+Authors@R: 
+    person("David", "Hancock", , "your.email@example.com", role = c("aut", "cre"))
+Description: A collection of personal utility functions for R programming,
+    including package management, data summaries, and other workflow helpers.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Imports: 
+    utils
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+URL: https://github.com/dwhancock17/myRtools
+BugReports: https://github.com/dwhancock17/myRtools/issues
+```
+
+## Step 3: Create Main Function File
+
+Run this to create the main function file:
+
+```{r create-function-file}
+#| eval: false
+
+# Create the main function file
+usethis::use_r("manage_packages")
+
+usethis::use_r("utils-pipe")
+
+usethis::use_r("utils-global-variables")
+# This will open R/manage_packages.R
+# Copy and paste the function code below into that file:
+```
+
+Copy this code into the `R/manage_packages.R` file that opens:
+
+```{r function-code}
 #| eval: false
 #| code-fold: true
 
@@ -90,9 +139,9 @@ manage_packages <- function(packages, quiet = FALSE) {
     cat("Successfully loaded:", successful_loads, "out of", total_packages, "packages\n")
     
     if(successful_loads == total_packages) {
-      cat("All packages ready for use!\n")
+      cat("✓ All packages ready for use!\n")
     } else {
-      cat("! Some packages may not be available\n")
+      cat("⚠ Some packages may not be available\n")
     }
     cat("=======================================\n\n")
   }
@@ -147,6 +196,7 @@ quick_summary <- function(data, show_str = TRUE) {
 #' @param predictors Character vector of predictor variable names
 #' @param cat_stat Statistic for categorical variables (default: "n (%)")
 #' @param cont_stat Statistic for continuous variables (default: median [IQR])
+#' @param family Model family (default: binomial())
 #' @param or_sample_n Optional integer; if set, univariate ORs are estimated
 #'   on a simple random subsample of this size
 #' @param seed Optional random seed for reproducibility
@@ -159,6 +209,7 @@ make_desc_or_table <- function(
   predictors,
   cat_stat = "{n} ({p}%)",
   cont_stat = "{median} ({p25}, {p75})",
+  family = binomial(),
   or_sample_n = NULL,
   seed = NULL
 ) {
@@ -212,8 +263,8 @@ make_desc_or_table <- function(
     dplyr::select({{ outcome }}, dplyr::all_of(predictors)) %>%
     gtsummary::tbl_uvregression(
       y = {{ outcome }},
-      method = stats::glm,
-      method.args = list(family = stats::binomial),
+      method = glm,
+      method.args = list(family = family),
       exponentiate = TRUE
     ) %>%
     gtsummary::modify_header(
@@ -231,7 +282,6 @@ make_desc_or_table <- function(
     )
   )
 }
-
 
 #' Save a gtsummary Table to File
 #'
@@ -284,6 +334,7 @@ save_gtsummary <- function(tbl, filename) {
 #' @param predictors Character vector of predictor variable names
 #' @param sample_n Size of each random subsample
 #' @param seed Optional base seed; second sample uses seed + 1
+#' @param family Model family (default: binomial())
 #'
 #' @return A tibble with odds ratios from both subsamples
 #' @export
@@ -292,7 +343,8 @@ compare_uv_or_subsamples <- function(
   outcome,
   predictors,
   sample_n,
-  seed = NULL
+  seed = NULL,
+  family = binomial()
 ) {
 
   if (sample_n >= nrow(data)) {
@@ -309,8 +361,8 @@ compare_uv_or_subsamples <- function(
     gtsummary::tbl_uvregression(
       data = dat %>% dplyr::select({{ outcome }}, dplyr::all_of(predictors)),
       y = {{ outcome }},
-      method = stats::glm,
-      method.args = list(family = stats::binomial),
+      method = glm,
+      method.args = list(family = family),
       exponentiate = TRUE
     )$table_body %>%
       dplyr::filter(!reference_row) %>%
@@ -331,3 +383,333 @@ compare_uv_or_subsamples <- function(
 
   dplyr::left_join(res1, res2, by = c("variable", "label"))
 }
+
+```
+
+## Step 4: Set Up Package Dependencies and License
+
+```{r setup-dependencies}
+#| eval: false
+
+# Add package dependencies
+usethis::use_package("utils", type = "Imports")
+usethis::use_package("dplyr")
+usethis::use_package("gtsummary")
+usethis::use_package("stats")
+usethis::use_package("gt")
+usethis::use_package("flextable")
+usethis::use_package("magrittr")
+
+# Add MIT license
+usethis::use_mit_license()
+
+# Set up testing framework
+usethis::use_testthat()
+```
+
+## Step 5: Create Tests
+
+```{r create-tests}
+#| eval: false
+
+# Create test file
+usethis::use_test("manage_packages")
+
+# This will open tests/testthat/test-manage_packages.R
+# Copy the test code below into that file:
+```
+
+Copy this into the test file that opens:
+
+```{r test-code}
+#| eval: false
+
+test_that("manage_packages works with valid packages", {
+  # Test with a package that should always be available
+  result <- manage_packages("base", quiet = TRUE)
+  
+  expect_type(result, "list")
+  expect_equal(result$total, 1)
+  expect_equal(result$success_rate, 1)
+  expect_length(result$failed_installs, 0)
+  expect_length(result$load_failures, 0)
+})
+
+test_that("manage_packages handles invalid packages gracefully", {
+  # Test with a non-existent package
+  result <- manage_packages("nonexistentpackage12345", quiet = TRUE)
+  
+  expect_type(result, "list")
+  expect_equal(result$total, 1)
+  expect_equal(result$success_rate, 0)
+  expect_length(result$failed_installs, 1)
+  expect_equal(result$failed_installs, "nonexistentpackage12345")
+})
+
+test_that("quick_summary works with data frames", {
+  expect_output(quick_summary(mtcars, show_str = FALSE), "Rows: 32")
+  expect_output(quick_summary(iris, show_str = FALSE), "Columns: 5")
+})
+
+test_that("make_desc_or_table returns gtsummary object", {
+
+  dat <- data.frame(
+    refusal = factor(c("Transported", "Refused Care", "Transported")),
+    age = c(70, 82, 77),
+    gender = factor(c("Male", "Female", "Male"))
+  )
+
+  tbl <- make_desc_or_table(
+    data = dat,
+    outcome = refusal,
+    predictors = c("age", "gender")
+  )
+
+  expect_s3_class(tbl, "gtsummary")
+})
+
+test_that("save_gtsummary rejects non-gtsummary input", {
+  expect_error(
+    save_gtsummary(mtcars, "test.html"),
+    "gtsummary"
+  )
+})
+```
+
+## Step 6: Create README
+
+```{r create-readme}
+#| eval: false
+
+# Create README file
+usethis::use_readme_md()
+
+# This will open README.md - replace its contents with the text below:
+```
+
+Copy this into the README.md file that opens:
+
+```markdown
+# myRtools
+
+Personal R utility functions for streamlined data analysis workflows.
+
+## Installation
+
+You can install myRtools from GitHub:
+
+```r
+# Install devtools if you haven't already
+install.packages("devtools")
+
+# Install myRtools
+devtools::install_github("dwhancock17/myRtools")
+```
+
+## Usage
+
+### Package Management
+
+Easily install and load multiple packages:
+
+```r
+library(myRtools)
+
+# Install and load packages
+manage_packages(c("dplyr", "ggplot2", "gt"))
+
+# Quiet mode
+manage_packages(c("tidyverse", "data.table"), quiet = TRUE)
+```
+
+### Quick Data Summary
+
+Get a fast overview of your data:
+
+```r
+# Quick summary
+quick_summary(mtcars)
+
+# Without structure details
+quick_summary(iris, show_str = FALSE)
+```
+
+### Descriptive Tables with Odds Ratios
+
+Create a combined descriptive and univariate odds ratio table:
+
+```r
+vars <- c("age_cat", "gender", "race", "time_to_scene", "business_hours")
+
+make_desc_or_table(
+  data = data,          # ~10M rows
+  outcome = DV,
+  predictors = IVs,
+  or_sample_n = 1e6,          # ORs on 1M rows
+  seed = 202402
+)
+
+```
+
+### Saving gtsummary Tables
+
+Save a gtsummary table produced by make_desc_or_table() (or any other gtsummary workflow) to common manuscript-ready formats with a single function call.
+
+Supported formats include HTML, Word (.docx), and PDF.
+
+```r
+# Create the table
+vars <- c("age_cat", "gender", "race", "time_to_scene", "business_hours")
+
+table1 <- make_desc_or_table(
+  data = dat_filter,
+  outcome = refusal,
+  predictors = vars
+)
+
+# View in RStudio
+table1
+
+# Save for manuscripts or reports
+save_gtsummary(table1, "Table1.html")
+save_gtsummary(table1, "Table1.docx")
+```
+
+### Sensitivity check of stability of ORs in random subsamples
+
+This function is not for tables — it’s for diagnostics and reassurance.
+
+What it does
+
+Draws two independent random subsamples
+
+Fits univariate ORs in each
+
+Returns tidy results so you can:
+
+eyeball consistency
+
+save as a supplement
+
+reassure reviewers (or yourself)
+
+```r
+# Sample two independent random samples and compare 
+or_compare <- compare_uv_or_subsamples(
+  data = dat_filter,
+  outcome = refusal,
+  predictors = vars,
+  sample_n = 500000,
+  seed = 123
+)
+
+or_compare
+```
+
+
+## Functions
+
+- `manage_packages()`: Automatically install missing packages and load all requested packages
+- `quick_summary()`: Provide quick overview of data frame dimensions and structure
+- `make_desc_or_table()`: Create a combined descriptive and univariate odds ratio table
+- `save_gtsummary()`: Save gtsummary tables as HTML, .docx, or PDF
+- `compare_uv_or_subsample()`: Compare univariate independent random subsamples for stability
+
+## License
+
+MIT License
+```
+```
+
+## Step 7: Build and Document Package
+
+```{r build-package}
+#| eval: false
+
+# Generate documentation from roxygen comments
+devtools::document()
+
+# Check package for issues
+devtools::check()
+
+# Install package locally to test
+devtools::install()
+```
+
+## Step 8: Set Up GitHub Repository
+
+```{r setup-github}
+#| eval: false
+
+# Initialize git repository
+usethis::use_git()
+
+# Create GitHub repository and push
+# This will open a browser window to create the repo
+usethis::use_github()
+
+# Optional: Add GitHub Actions for automated checking
+usethis::use_github_action_check_standard()
+```
+
+## Step 9: Test Installation from GitHub
+
+After pushing to GitHub, test installation:
+
+```{r test-github-install}
+#| eval: false
+
+# Remove local version to test GitHub installation
+remove.packages("myRtools")
+
+# Install from GitHub
+devtools::install_github("dwhancock17/myRtools")
+
+# Test that it works
+library(myRtools)
+manage_packages(c("readr", "stringr"))
+```
+
+## Usage on Other Computers
+
+On any other computer, just run:
+
+```{r usage-other-computers}
+#| eval: false
+
+# One-time installation
+devtools::install_github("dwhancock17/myRtools")
+
+# Then use in any script or Quarto document
+library(myRtools)
+manage_packages(c("tidyverse", "gt", "gtsummary", "data.table"))
+```
+
+## Adding More Functions Later
+
+To add new functions to your package:
+
+```{r add-functions}
+#| eval: false
+
+# Create new function file
+usethis::use_r("new_function_name")
+
+# After adding functions, always:
+devtools::document()  # Update documentation
+devtools::check()     # Check for issues
+devtools::install()   # Reinstall locally
+
+# Commit and push to GitHub
+# Users can update with: devtools::install_github("dwhancock17/myRtools")
+```
+
+## Summary
+
+Once set up, your workflow becomes:
+
+1. **One-time setup**: Run through Steps 1-8 above
+2. **On any computer**: `devtools::install_github("dwhancock17/myRtools")`
+3. **In any script**: `library(myRtools); manage_packages(c("your", "packages"))`
+
+Your functions are now available anywhere you have R and internet access!

@@ -1,0 +1,10 @@
+utils::globalVariables(
+  c(
+    "reference_row",
+    "variable",
+    "label",
+    "estimate",
+    "conf.low",
+    "conf.high"
+  )
+)
