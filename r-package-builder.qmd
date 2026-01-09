@@ -644,6 +644,8 @@ devtools::install()
 # Initialize git repository
 usethis::use_git()
 
+usethis::use_git_remote("origin", url = NULL, overwrite = TRUE)
+
 # Create GitHub repository and push
 # This will open a browser window to create the repo
 usethis::use_github()
