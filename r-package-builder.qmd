@@ -649,7 +649,7 @@ usethis::use_git()
 usethis::use_github()
 
 # Optional: Add GitHub Actions for automated checking
-usethis::use_github_action_check_standard()
+#usethis::use_github_action_check_standard()
 ```
 
 ## Step 9: Test Installation from GitHub
